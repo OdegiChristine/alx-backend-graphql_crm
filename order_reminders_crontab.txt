@@ -1,0 +1,1 @@
+0 8 * * * /usr/bin/python3 /mnt/d/Docs/graphQL/alx_backend_graphql_crm/send_order_reminders.py
