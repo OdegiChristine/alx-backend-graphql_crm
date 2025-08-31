@@ -1,5 +1,7 @@
 import requests
 from datetime import datetime
+from gql import gql, Client
+from gql.transport.requests import RequestsHTTPTransport
 
 GRAPHQL_ENDPOINT = "http://localhost:8000/graphql"
 LOG_FILE = "/tmp/low_stock_updates_log.txt"
@@ -32,29 +34,38 @@ def log_crm_heartbeat():
 
 
 def update_low_stock():
-    query = """
-    mutation {
-        updateLowStockProducts {
-            success
-            updatedProducts {
-                id
-                name
-                stock
+    # Configure GraphQL transport
+    transport = RequestsHTTPTransport(
+        url=GRAPHQL_ENDPOINT,
+        verify=True,
+        retries=3,
+    )
+    client = Client(transport=transport, fetch_schema_from_transport=True)
+
+    # Define the mutation
+    mutation = gql(
+        """
+        mutation {
+            updateLowStockProducts {
+                success
+                updatedProducts {
+                    id
+                    name
+                    stock
+                }
             }
         }
-    }
-    """
+        """
+    )
 
     try:
-        response = requests.post(GRAPHQL_ENDPOINT, json={"query": query})
-        response.raise_for_status()
-        data = response.json()
+        # Execute the mutation
+        result = client.execute(mutation)
+        updates = result["updateLowStockProducts"]["updatedProducts"]
+        success_msg = result["updateLowStockProducts"]["success"]
 
-        updates = data["data"]["updatedlowStockProducts"]["updatedProducts"]
-        success_msg = data["data"]["updateLowStockProducts"]["success"]
-
+        # Log the results
         timestamp = datetime.now().strftime("%d/%m/%Y-%H:%M:%S")
-
         with open(LOG_FILE, "a") as f:
             f.write(f"\n[{timestamp}] {success_msg}\n")
             for product in updates:
@@ -62,4 +73,6 @@ def update_low_stock():
 
     except Exception as e:
         with open(LOG_FILE, "a") as f:
-            f.write(f"\n[{datetime.now().strftime('%d/%m/%Y-%H:%M:%S')}")
+            f.write(
+                f"\n[{datetime.now().strftime('%d/%m/%Y-%H:%M:%S')}] Error: {e}\n"
+            )

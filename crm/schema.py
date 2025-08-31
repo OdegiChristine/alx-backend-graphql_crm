@@ -4,6 +4,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from .models import Customer, Product, Order
+# from crm.models import Product
 from .filters import CustomerFilter, ProductFilter, OrderFilter
 from graphene_django import DjangoObjectType
 from graphene_django.filter import DjangoFilterConnectionField
